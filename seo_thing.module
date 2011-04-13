@@ -13,7 +13,6 @@ function seo_thing_menu() {
     'access arguments' => array('access content'),
     'menu' => MENU_NORMAL_ITEM,
   );
-
   $items['admin/keywords'] = array(
     'title' => 'SEO Keywords',
     'description' => "Something.",
@@ -27,7 +26,7 @@ function seo_thing_menu() {
 function seo_thing_theme() {
   return array(
     'keywords_table' => array(
-      'arguments' => array(),
+      'arguments' => array('form' => ''),
       'template' => 'seo-thing-keywords-table',
     ), 
   );
@@ -36,8 +35,74 @@ function seo_thing_theme() {
 /**
  * Page callback for /keywords
  */
-function seo_thing_keywords() {
-  if (isset($_POST['download']) && isset($_POST['keyword']) && is_array($_POST['keyword'])) {
+function seo_thing_keywords() {  
+  drupal_add_js(drupal_get_path('module', 'seo_thing') . '/seo_thing.js');
+  drupal_add_css(drupal_get_path('module', 'seo_thing') . '/seo_thing.css');
+  $form = drupal_get_form('seo_thing_keywords_form');
+  return theme('keywords_table', $form);
+}
+
+/**
+ * Keywords form.
+ */
+function seo_thing_keywords_form($form_state) {
+  $form = array();
+  
+  $form['adgroup'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Ad Group'),
+    '#default_value' => '',
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+  );
+  $form['campaign'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Campaign'),
+    '#default_value' => '',
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+  );
+  $form['keywords'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Keywords'),
+    '#default_value' => '',
+  );
+  $form['add'] = array(  
+    '#type' => 'button', 
+    '#value' => t('Add'),
+  );
+  $form['button'] = array(  
+    '#type' => 'submit',
+    '#value' => t('Download CSV'),
+  );
+  $form['table'] = array(
+    '#type' => 'markup',
+    '#value' => '
+      <table id="seo-thing-keywords-table">
+        <thead>
+          <tr>
+            <th>Keyword</th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>'
+  );
+  $form['#submit'] = array('seo_thing_keywords_form_submit');
+  
+  return $form;
+}
+
+/**
+ * Page callback for /keywords
+ */
+function seo_thing_keywords_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == 'Download CSV') {
     $rows = array();
     
     foreach ($_POST['keyword'] as $i => $keyword) {
@@ -78,10 +143,6 @@ function seo_thing_keywords() {
       exit;
     }
   }
-  
-  drupal_add_js(drupal_get_path('module', 'seo_thing') . '/seo_thing.js');
-  drupal_add_css(drupal_get_path('module', 'seo_thing') . '/seo_thing.css');
-  return theme('keywords_table');
 }
 
 /**

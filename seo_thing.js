@@ -1,7 +1,7 @@
 
 Drupal.behaviors.keywords_table = function(context) {
-  $('#add').click(function(e) {
-    var values = ($.trim($('#keyword').val()) || '').split(/\r\n|\r|\n/);
+  $('#edit-add').click(function(e) {
+    var values = ($.trim($('#edit-keywords').val()) || '').split(/\r\n|\r|\n/);
     
     for (var x = 0, len = values.length; x < len; x++) {
       if (!values[x]) {
@@ -27,7 +27,7 @@ Drupal.behaviors.keywords_table = function(context) {
       $('#seo-thing-keywords-table tbody').append($tr);
     }
     
-    $('#keyword').val('');
+    $('#edit-keywords').val('');
     
     e.preventDefault();
   });
