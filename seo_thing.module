@@ -48,6 +48,7 @@ function seo_thing_keywords() {
 function seo_thing_keywords_form($form_state) {
   $form = array();
   
+  /*
   $form['adgroup'] = array(
     '#type' => 'textfield',
     '#title' => t('Ad Group'),
@@ -64,10 +65,12 @@ function seo_thing_keywords_form($form_state) {
     '#maxlength' => 128,
     '#required' => TRUE,
   );
+  */
   $form['keywords'] = array(
     '#type' => 'textarea',
     '#title' => t('Keywords'),
     '#default_value' => '',
+    '#value' => isset($_POST['keyword']) ? implode("\n", $_POST['keyword']) : '',
   );
   $form['add'] = array(  
     '#type' => 'button', 

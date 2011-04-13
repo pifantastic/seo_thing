@@ -1,6 +1,7 @@
 
 Drupal.behaviors.keywords_table = function(context) {
-  $('#edit-add').click(function(e) {
+
+  function addRow() {
     var values = ($.trim($('#edit-keywords').val()) || '').split(/\r\n|\r|\n/);
     
     for (var x = 0, len = values.length; x < len; x++) {
@@ -28,7 +29,12 @@ Drupal.behaviors.keywords_table = function(context) {
     }
     
     $('#edit-keywords').val('');
-    
+  }
+  
+  $('#edit-add').click(function(e) {
+    addRow();
     e.preventDefault();
   });
+  
+  addRow();
 };

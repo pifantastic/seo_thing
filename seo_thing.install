@@ -43,7 +43,21 @@ function seo_thing_schema() {
         'default' => 0,
         'unsigned' => TRUE,
         'description' => 'The number of times this keyword has been entered.',
-      )
+      ),
+      'adgroup' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ad group.',
+      ),
+      'campaign' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Campaign.',
+      ),
     ),
     'primary key' => array('kid'),
     'unique keys' => array('word' => array('word')),
