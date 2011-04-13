@@ -1,0 +1,5 @@
+name = Seo Thing
+description = "An SEO thing."
+package = Core
+version = 6.x-0.1
+core = 6.x

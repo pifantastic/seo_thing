@@ -1,0 +1,104 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function seo_thing_menu() {
+  $items = array();
+  
+  $items['keywords'] = array(
+    'title' => 'SEO Keywords',
+    'description' => "Something.",
+    'page callback' => 'seo_thing_keywords',
+    'access arguments' => array('access content'),
+    'menu' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/keywords'] = array(
+    'title' => 'SEO Keywords',
+    'description' => "Something.",
+    'page callback' => 'seo_thing_keywords_admin',
+    'access arguments' => array('administer content'),
+  );
+
+  return $items;
+}
+
+function seo_thing_theme() {
+  return array(
+    'keywords_table' => array(
+      'arguments' => array(),
+      'template' => 'seo-thing-keywords-table',
+    ), 
+  );
+}
+
+/**
+ * Page callback for /keywords
+ */
+function seo_thing_keywords() {
+  if (isset($_POST['download']) && isset($_POST['keyword']) && is_array($_POST['keyword'])) {
+    $rows = array();
+    
+    foreach ($_POST['keyword'] as $i => $keyword) {
+      $keyword = trim($keyword);
+      
+      if ($keyword === '') {
+        continue;
+      }
+      
+      if ($kid = db_result(db_query("SELECT kid FROM {seo_thing_keywords} WHERE word = '%s'", $keyword))) {
+        db_query("UPDATE {seo_thing_keywords} SET total = total + 1 WHERE kid = %d", $kid);
+      } else {
+        db_query("INSERT INTO {seo_thing_keywords} (word, total) VALUES ('%s', 1)", $keyword);
+      }
+      
+      $rows[] = array(
+        $keyword,
+        sprintf('"%s"', $keyword),
+        sprintf('[%s]', $keyword),
+      );
+    }
+    
+    if (count($rows)) {
+      $tmp = file_directory_temp() . '/' . uniqid();
+      
+      $fp = fopen($tmp, 'w');
+      foreach ($rows as $row) {
+        fputcsv($fp, $row);
+      }
+      fclose($fp);
+      
+      header("Cache-Control: public");
+      header("Content-Description: File Transfer");
+      header("Content-Disposition: attachment; filename=keywords.csv");
+      header("Content-Type: text/csv");
+      header("Content-Transfer-Encoding: binary");
+      readfile($tmp);
+      exit;
+    }
+  }
+  
+  drupal_add_js(drupal_get_path('module', 'seo_thing') . '/seo_thing.js');
+  drupal_add_css(drupal_get_path('module', 'seo_thing') . '/seo_thing.css');
+  return theme('keywords_table');
+}
+
+/**
+ * Page callback for /admin/keywords
+ */
+function seo_thing_keywords_admin() {
+  $header = array(
+    array('data' => t('Keyword'), 'field' => 'word'),
+    array('data' => t('Total'), 'field' => 'total')
+  );
+
+  $result = pager_query('SELECT * FROM {seo_thing_keywords}' . tablesort_sql($header));
+  
+  $rows = array();
+  while ($keyword = db_fetch_object($result)) {
+    $rows[] = array(check_plain($keyword->word), $keyword->total);
+  }
+  
+  return theme('pager') . theme('table', $header, $rows) . theme('pager');
+}
