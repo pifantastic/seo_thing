@@ -6,158 +6,104 @@
 function seo_thing_menu() {
   $items = array();
   
+  $items['node/%node/csv'] = array(
+    'title' => 'Download CSV',
+    'page callback' => 'seo_thing_download_csv',
+    'page arguments' => array(1),
+    'access callback' => 'seo_thing_download_csv_access',
+    'access arguments' => array(1),
+    'weight' => 2,
+    'type' => MENU_LOCAL_TASK,
+  );
+    
   $items['keywords'] = array(
-    'title' => 'SEO Keywords',
-    'description' => "Something.",
+    'title' => 'Keywords',
+    'description' => "Occurrences of keywords across all campaigns.",
     'page callback' => 'seo_thing_keywords',
     'access arguments' => array('access content'),
-    'menu' => MENU_NORMAL_ITEM,
   );
-  $items['admin/keywords'] = array(
-    'title' => 'SEO Keywords',
-    'description' => "Something.",
-    'page callback' => 'seo_thing_keywords_admin',
-    'access arguments' => array('administer content'),
-  );
-
+  
   return $items;
 }
 
-function seo_thing_theme() {
-  return array(
-    'keywords_table' => array(
-      'arguments' => array('form' => ''),
-      'template' => 'seo-thing-keywords-table',
-    ), 
-  );
-}
-
-/**
- * Page callback for /keywords
- */
-function seo_thing_keywords() {  
-  drupal_add_js(drupal_get_path('module', 'seo_thing') . '/seo_thing.js');
-  drupal_add_css(drupal_get_path('module', 'seo_thing') . '/seo_thing.css');
-  $form = drupal_get_form('seo_thing_keywords_form');
-  return theme('keywords_table', $form);
-}
-
-/**
- * Keywords form.
- */
-function seo_thing_keywords_form($form_state) {
-  $form = array();
+function seo_thing_download_csv($node) {
+  $rows = array();
   
-  /*
-  $form['adgroup'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Ad Group'),
-    '#default_value' => '',
-    '#size' => 60,
-    '#maxlength' => 128,
-    '#required' => TRUE,
-  );
-  $form['campaign'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Campaign'),
-    '#default_value' => '',
-    '#size' => 60,
-    '#maxlength' => 128,
-    '#required' => TRUE,
-  );
-  */
-  $form['keywords'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Keywords'),
-    '#default_value' => '',
-    '#value' => isset($_POST['keyword']) ? implode("\n", $_POST['keyword']) : '',
-  );
-  $form['add'] = array(  
-    '#type' => 'button', 
-    '#value' => t('Add'),
-  );
-  $form['button'] = array(  
-    '#type' => 'submit',
-    '#value' => t('Download CSV'),
-  );
-  $form['table'] = array(
-    '#type' => 'markup',
-    '#value' => '
-      <table id="seo-thing-keywords-table">
-        <thead>
-          <tr>
-            <th>Keyword</th>
-            <th></th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>'
-  );
-  $form['#submit'] = array('seo_thing_keywords_form_submit');
+  foreach ($node->field_campaign_keywords as $keyword) {
+    $keyword = trim($keyword['value']);
+    $rows[] = array($keyword, sprintf('"%s"', $keyword), sprintf('[%s]', $keyword));
+  }
   
-  return $form;
-}
-
-/**
- * Page callback for /keywords
- */
-function seo_thing_keywords_form_submit($form, &$form_state) {
-  if ($form_state['values']['op'] == 'Download CSV') {
-    $rows = array();
+  if (count($rows)) {
+    $tmp = file_directory_temp() . '/' . uniqid();
     
-    foreach ($_POST['keyword'] as $i => $keyword) {
-      $keyword = trim($keyword);
-      
-      if ($keyword === '') {
-        continue;
-      }
-      
-      if ($kid = db_result(db_query("SELECT kid FROM {seo_thing_keywords} WHERE word = '%s'", $keyword))) {
-        db_query("UPDATE {seo_thing_keywords} SET total = total + 1 WHERE kid = %d", $kid);
-      } else {
-        db_query("INSERT INTO {seo_thing_keywords} (word, total) VALUES ('%s', 1)", $keyword);
-      }
-      
-      $rows[] = array(
-        $keyword,
-        sprintf('"%s"', $keyword),
-        sprintf('[%s]', $keyword),
-      );
+    $fp = fopen($tmp, 'w');
+    foreach ($rows as $row) {
+      fputcsv($fp, $row);
+    }
+    fclose($fp);
+    
+    if (ob_get_level()) {
+      ob_end_clean();
     }
     
-    if (count($rows)) {
-      $tmp = file_directory_temp() . '/' . uniqid();
-      
-      $fp = fopen($tmp, 'w');
-      foreach ($rows as $row) {
-        fputcsv($fp, $row);
-      }
-      fclose($fp);
-      
-      header("Cache-Control: public");
-      header("Content-Description: File Transfer");
-      header("Content-Disposition: attachment; filename=keywords.csv");
-      header("Content-Type: text/csv");
-      header("Content-Transfer-Encoding: binary");
-      readfile($tmp);
-      exit;
+    header("Cache-Control: public");
+    header("Content-Description: File Transfer");
+    header("Content-Disposition: attachment; filename=" . seo_thing_clean_string($node->title) . '-' . $node->nid . ".csv");
+    header("Content-Type: text/csv");
+    header("Content-Transfer-Encoding: binary");
+    readfile($tmp);
+    exit;
+  }
+}
+
+function seo_thing_download_csv_access($node) {
+  return $node->type === 'campaign';
+}
+
+function seo_thing_theme_registry_alter(&$theme_registry) {
+  $path = drupal_get_path('module', 'seo_thing') . '/templates';
+  array_unshift($theme_registry['node']['theme paths'], $path);
+  array_unshift($theme_registry['content_field']['theme paths'], $path);
+}
+
+function seo_thing_preprocess_node(&$vars) {
+  $vars['template_files'][] = 'node-campaign-type';
+}
+
+function seo_thing_preprocess_content_field(&$vars) {
+  if ($vars['field_name'] === 'field_campaign_keywords') {
+    $header = array(
+      array('data' => t('Keyword')),
+      array('data' => t('"Keyword"')),
+      array('data' => t('[Keyword]')),
+    );
+     
+    $rows = array(); 
+    foreach ($vars['items'] as $keyword) {
+      $keyword = check_plain(trim($keyword['value']));
+      $rows[] = array($keyword, sprintf('"%s"', $keyword), sprintf('[%s]', $keyword));
     }
+    
+    $vars['keywords_table'] = theme('table', $header, $rows);
   }
 }
 
 /**
  * Page callback for /admin/keywords
  */
-function seo_thing_keywords_admin() {
+function seo_thing_keywords() {
   $header = array(
     array('data' => t('Keyword'), 'field' => 'word'),
     array('data' => t('Total'), 'field' => 'total')
   );
 
-  $result = pager_query('SELECT * FROM {seo_thing_keywords}' . tablesort_sql($header));
+  $result = pager_query('
+    SELECT field_campaign_keywords_value AS word, 
+    COUNT(*) AS total 
+    FROM {content_field_campaign_keywords} 
+    GROUP BY word' . tablesort_sql($header)
+  );
   
   $rows = array();
   while ($keyword = db_fetch_object($result)) {
@@ -165,4 +111,10 @@ function seo_thing_keywords_admin() {
   }
   
   return theme('pager') . theme('table', $header, $rows) . theme('pager');
+}
+
+function seo_thing_clean_string($string) {
+  $clean = preg_replace("/[^a-zA-Z0-9\/_|+ -]/", '', $string);
+  $clean = strtolower(trim($clean, '-'));
+  return preg_replace("/[\/_|+ -]+/", '-', $clean);
 }
