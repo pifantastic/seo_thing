@@ -144,6 +144,31 @@ function campaigns_views_default_views() {
   $handler->override_option('items_per_page', 50);
   $handler->override_option('use_pager', '1');
   $handler->override_option('style_plugin', 'table');
+  $handler->override_option('style_options', array(
+    'grouping' => '',
+    'override' => 1,
+    'sticky' => 0,
+    'order' => 'asc',
+    'columns' => array(
+      'title' => 'title',
+      'field_campaign_ad_group_value' => 'field_campaign_ad_group_value',
+      'field_campaign_keywords_value' => 'field_campaign_keywords_value',
+    ),
+    'info' => array(
+      'title' => array(
+        'sortable' => 1,
+        'separator' => '',
+      ),
+      'field_campaign_ad_group_value' => array(
+        'sortable' => 1,
+        'separator' => '',
+      ),
+      'field_campaign_keywords_value' => array(
+        'separator' => '',
+      ),
+    ),
+    'default' => '-1',
+  ));
   $handler = $view->new_display('page', 'Page', 'page_1');
   $handler->override_option('path', 'campaigns');
   $handler->override_option('menu', array(
